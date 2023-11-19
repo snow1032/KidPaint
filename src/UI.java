@@ -46,8 +46,8 @@ public class UI extends JFrame {
 	private int selectedColor = -543230;
 	int[][] panel = new int[50][50];
 	int blockSize = 16;
-	private Stack<int[][]> undoStack = new Stack<>();
-	private Stack<int[][]> redoStack = new Stack<>();
+	private Stack<int[]> undoStack = new Stack<>();
+	private Stack<int[]> redoStack = new Stack<>();
 	PaintMode paintMode = PaintMode.Pixel;
 	/** End of Variable Declaration */
 
@@ -234,42 +234,46 @@ public class UI extends JFrame {
 
 		undoButton.addActionListener(e -> {
 			if (!undoStack.isEmpty()) {
-				redoStack.push(cloneArray(panel)); // Save current state before undoing
-				panel = undoStack.pop(); // Set panel to previous state
-				paintPanel.repaint(); // Redraw the panel
-				// send entire panel state
-				for(int x = 0; x< panel.length; x++) {
-					for (int y = 0; y< panel[0].length; y++) {
-						try {
-							out.writeInt(0);
-							String p = x + " " + y + " " + panel[x][y];
-							out.writeInt(p.length());
-							out.write(p.getBytes(), 0, p.length());
-						} catch (IOException e1) {
-							e1.printStackTrace();
-						}
-					}
+				int[] pixel = undoStack.pop();
+				int x = pixel[0];
+				int y = pixel[1];
+				int color = pixel[2];
+				int[] newPixel = new int[]{x, y, panel[x][y]};
+
+				redoStack.push(newPixel);
+				panel[x][y] = color;
+				paintPanel.repaint(x * blockSize, y * blockSize, blockSize, blockSize);
+
+				try {
+					out.writeInt(0);
+					String p = x + " " + y + " " + color;
+					out.writeInt(p.length());
+					out.write(p.getBytes(), 0, p.length());
+				} catch (IOException e1) {
+					e1.printStackTrace();
 				}
 			}
 		});
 
 		redoButton.addActionListener(e -> {
 			if (!redoStack.isEmpty()) {
-				undoStack.push(cloneArray(panel)); // Save current state before redoing
-				panel = redoStack.pop(); // Set panel to next state
-				paintPanel.repaint(); // Redraw the panel
-				// send entire panel state
-				for(int x = 0; x< panel.length; x++) {
-					for (int y = 0; y< panel[0].length; y++) {
-						try {
-							out.writeInt(0);
-							String p = x + " " + y + " " + panel[x][y];
-							out.writeInt(p.length());
-							out.write(p.getBytes(), 0, p.length());
-						} catch (IOException e1) {
-							e1.printStackTrace();
-						}
-					}
+				int[] pixel = redoStack.pop();
+				int x = pixel[0];
+				int y = pixel[1];
+				int color = pixel[2];
+				int[] newPixel = new int[]{x, y, panel[x][y]};
+
+				undoStack.push(newPixel);
+				panel[x][y] = color;
+				paintPanel.repaint(x * blockSize, y * blockSize, blockSize, blockSize);
+
+				try {
+					out.writeInt(0);
+					String p = x + " " + y + " " + color;
+					out.writeInt(p.length());
+					out.write(p.getBytes(), 0, p.length());
+				} catch (IOException e1) {
+					e1.printStackTrace();
 				}
 			}
 		});
@@ -372,17 +376,13 @@ public class UI extends JFrame {
 	}
 
 	/**
-	 * Saves the current state of the panel into the undo stack.
-	 * The current state is represented by a 2D array of integers.
-	 * Each element in the array represents the color of a pixel in the panel.
-	 * The method copies the contents of the panel into a new array and pushes it onto the undo stack.
+	 * Saves the current state of the last painted pixel into the undo stack.
+	 * The current state is represented by the row, column, and color of the last painted pixel.
+	 * The method pushes the row, column, and color onto the undo stack.
 	 * After saving the current state, the redo stack is cleared.
 	 */
-	private void saveCurrentState() {
-		int[][] currentState = new int[panel.length][panel[0].length];
-		for (int i = 0; i < panel.length; i++) {
-			System.arraycopy(panel[i], 0, currentState[i], 0, panel[i].length);
-		}
+	private void saveCurrentState(int col, int row, int color) {
+		int[] currentState = new int[]{col, row, color};
 		undoStack.push(currentState);
 		redoStack.clear();
 	}
@@ -392,8 +392,8 @@ public class UI extends JFrame {
 	 * @param col, row - the position of the selected pixel
 	 */
 	public void paintPixel(int col, int row) throws IOException, ArrayIndexOutOfBoundsException {
-		if (!eraserMode && panel[col][row] != selectedColor) saveCurrentState();
-		else if (eraserMode && panel[col][row] == selectedColor) saveCurrentState();
+		if (!eraserMode && panel[col][row] != selectedColor) saveCurrentState(col, row, panel[col][row]);
+		else if (eraserMode && panel[col][row] == selectedColor) saveCurrentState(col, row, panel[col][row]);
 
 		if (col >= panel.length || row >= panel[0].length) return;
 
@@ -416,7 +416,7 @@ public class UI extends JFrame {
 	 * @return a list of modified pixels
 	 */
 	public List paintArea(int col, int row) throws IOException {
-		if (panel[col][row] != selectedColor) saveCurrentState();
+		if (panel[col][row] != selectedColor) saveCurrentState(col, row, panel[col][row]);
 
 		LinkedList<Point> filledPixels = new LinkedList<Point>();
 
@@ -456,20 +456,6 @@ public class UI extends JFrame {
 			paintPanel.repaint();
 		}
 		return filledPixels;
-	}
-
-	/**
-	 * Creates a deep copy of a 2D integer array.
-	 * 
-	 * @param source the original array to be cloned
-	 * @return a new array that is a deep copy of the source array
-	 */
-	private int[][] cloneArray(int[][] source) {
-		int[][] clone = new int[source.length][];
-		for (int i = 0; i < source.length; i++) {
-			clone[i] = source[i].clone();
-		}
-		return clone;
 	}
 
 	/**
