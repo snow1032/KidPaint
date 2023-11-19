@@ -1,122 +1,91 @@
-/*
-    This class is showing a Login UI page for users to input their username and licences.
- */
-
+import java.awt.*;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.util.Objects;
 
-public class LoginUI extends JFrame implements ActionListener {
-    JLabel nameJLabel, licenceJLabel;
-    JTextField nameJTextField;
-    JPasswordField licenceField;
-    JButton submitJButton;
-    JPanel heroJPane, loginJPane, submitJPane;
-    static boolean isLogin = false;
-    private static LoginUI instance;
+public class LoginUI extends JFrame {
+    String serverIp;
+    int serverPort;
 
     /**
-     * get the instance of LoginUI. Singleton design pattern.
-     *
-     * @return initialized instance of LoinUI
+     * The LoginUI class represents the graphical user interface for the login page.
+     * It allows users to input their name and start the application.
      */
-    public static LoginUI getInstance() {
-        if (instance == null)
-            instance = new LoginUI();
-        return instance;
-    }
+    public LoginUI() {
+        this.setTitle("Login Page");
+        this.setSize(200, 150);
+        this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-
-    private LoginUI() {
-        //get container of the window
         Container container = this.getContentPane();
-        container.setLayout(new GridLayout(0, 1, 10, 10));
-        container.setBackground(Color.white);
+        container.setLayout(new BorderLayout());
 
-        //title of KidPaint
-        Font font1 = new Font("SansSerif", Font.BOLD, 20);
-        JTextArea titleArea1 = new JTextArea();
-        titleArea1.setFont(font1);
-        titleArea1.setEditable(false);
-        titleArea1.setText("\nKidPaint");
-        titleArea1.setMargin(new Insets(0, 10, 0, 10));
-        titleArea1.setBackground(Color.white);
+        JPanel usernamePanel = new JPanel();
+        JPanel submitPanel = new JPanel();
 
-        //description of the KidPaint
-        Font font2 = new Font("Georgia", Font.PLAIN, 15);
-        JTextArea descriptionArea2 = new JTextArea();
-        descriptionArea2.setFont(font2);
-        descriptionArea2.setEditable(false);
-        descriptionArea2.setLineWrap(true);
-        descriptionArea2.setWrapStyleWord(true);
-        descriptionArea2.setMargin(new Insets(10, 20, 10, 20));
-        descriptionArea2.setText("This application allows  users to use the shared drawing board to draw at the " +
-                "same time and synchronize it to other users in the same group. After entering your name, click " +
-                "the login button to select an existing group or create a new group, and then start enjoying the " +
-                "fun of drawing!");
-        descriptionArea2.setBackground(Color.white);
-        heroJPane = new JPanel();
-        heroJPane.setBackground(Color.white);
-        heroJPane.setLayout(new GridLayout(2, 0));
-        heroJPane.add(titleArea1);
-        heroJPane.add(descriptionArea2);
-        container.add(heroJPane, BorderLayout.NORTH);
+        Label label = new Label("Please input your name:");
+        JTextField usernameTextField = new JTextField(10);
+        JButton submitButton = new JButton("Submit");
 
-        //enter name and licence number
-        nameJLabel = new JLabel("Enter your name：");
-        nameJLabel.setBounds(150, 50, 300, 30);
-        licenceJLabel = new JLabel("Enter your licence number(default: 123456): ");
-        licenceJLabel.setBounds(150, 100, 300, 30);
-        nameJTextField = new JTextField();
-        nameJTextField.setBounds(450, 50, 200, 30);
-        licenceField = new JPasswordField();
-        licenceField.setBounds(450, 100, 200, 30);
+        submitPanel.add(label);
+        submitPanel.add(usernameTextField);
+        usernamePanel.add(submitButton);
 
-        //add login to container
-        loginJPane = new JPanel();
-        loginJPane.setBackground(Color.white);
-        loginJPane.setLayout(null);
-        loginJPane.add(nameJLabel);
-        loginJPane.add(nameJTextField);
-        loginJPane.add(licenceJLabel);
-        loginJPane.add(licenceField);
-        container.add(loginJPane, BorderLayout.CENTER);
+        container.add(usernamePanel, BorderLayout.SOUTH);
+        container.add(submitPanel);
 
-        //submit button
-        submitJButton = new JButton("Submit");
-        submitJButton.setBounds(350, 30, 80, 50);
-        submitJPane = new JPanel();
-        submitJPane.setLayout(null);
-        submitJPane.setBackground(Color.white);
-        container.add(submitJPane, BorderLayout.SOUTH);
-        submitJPane.add(submitJButton);
+        submitButton.addActionListener(e -> {
+            String username = usernameTextField.getText();
 
-        //lister of submit button
-        submitJButton.addActionListener(this);
-        this.setTitle("KidPaint.Login");
-        this.setSize(800, 600);
-        this.setLocation(100, 100);
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setVisible(true);
+            if (username.equals("")) username = "Anonymous";
+            submitButton.setEnabled(false);
+            try {
+                req(username);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        });
     }
 
-    @Override
-    public void actionPerformed(ActionEvent e) {
+    /**
+     * Sends a request with the given username to the server and establishes a connection.
+     * 
+     * @param username the username to be sent to the server
+     * @throws UnknownHostException if the IP address of the server is unknown
+     * @throws IOException if an I/O error occurs while sending or receiving data
+     */
+    void req(String username) throws UnknownHostException, IOException {
+        DatagramSocket socket = new DatagramSocket();
+        DatagramPacket packet = new DatagramPacket(username.getBytes(), username.length(),
+                InetAddress.getByName("255.255.255.255"), 5555);
+        socket.send(packet);
+        DatagramPacket received = new DatagramPacket(new byte[1024], 1024);
 
-        //if click submit button
-        if (e.getSource() == submitJButton) {
-            String licence = "123456";
+        while (true) {
+            System.out.println("Listening...");
 
-            String name = nameJTextField.getText();
-            String p1 = String.copyValueOf(licenceField.getPassword());
+            socket.receive(received);
+            String content = new String(received.getData(), 0, received.getLength());
 
-            if (p1.equals(licence) && !Objects.equals(name, "")) {
-                KidPaint.name = name;
-                isLogin = true;
+            if (content != null) {
+                serverIp = received.getAddress().toString();
+                serverIp = serverIp.substring(1);   // remove the first "/" of the address string
+                serverPort = Integer.parseInt(content);
+                System.out.println("Server IP: " + serverIp);
+                System.out.println("Server Port: " + serverPort);
+
+                socket.close();
+                this.setVisible(false);
+
+                UI ui = UI.getInstance(serverIp, serverPort, username);
+
+                ui.setData(new int[50][50], 20);
+                ui.setVisible(true);
+                break;
             }
         }
     }
 }
-
