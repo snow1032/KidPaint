@@ -285,7 +285,7 @@ public class UI extends JFrame {
 		resetButton.addActionListener(e -> {
 			// pop a confirm dialog
 			int r = JOptionPane.showConfirmDialog(null,
-					"Are you sure to reset the canvas?",
+					"Are you sure to reset the canvas? The action cannot be undone.",
 					"Reset",
 					JOptionPane.YES_NO_OPTION);
 			if (r == JOptionPane.YES_OPTION) {
