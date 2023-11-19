@@ -33,10 +33,11 @@ public class UI extends JFrame {
 	private JToggleButton penToggleButton;
 	private JToggleButton bucketToggleButton;
 	private JToggleButton eraserToggleButton;
-	private  JToggleButton loadToggleButton;
-	private JToggleButton saveToggleButton;
 	private JButton undoButton;
 	private JButton redoButton;
+	private JButton resetButton;
+	private  JToggleButton loadToggleButton;
+	private JToggleButton saveToggleButton;
 	private JFileChooser fileChooser = new JFileChooser();
 
 	private boolean eraserMode = false;
@@ -200,6 +201,9 @@ public class UI extends JFrame {
 		redoButton = new JButton("Redo");
 		toolPnl.add(redoButton);
 
+		resetButton = new JButton("Reset");
+		toolPnl.add(resetButton);
+
 		loadToggleButton = new JToggleButton("Import");
 		toolPnl.add(loadToggleButton);
 		loadToggleButton.setSelected(false);
@@ -242,7 +246,6 @@ public class UI extends JFrame {
 
 				redoStack.push(newPixel);
 				panel[x][y] = color;
-				paintPanel.repaint(x * blockSize, y * blockSize, blockSize, blockSize);
 
 				try {
 					out.writeInt(0);
@@ -252,6 +255,7 @@ public class UI extends JFrame {
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
+				paintPanel.repaint();
 			}
 		});
 
@@ -265,7 +269,6 @@ public class UI extends JFrame {
 
 				undoStack.push(newPixel);
 				panel[x][y] = color;
-				paintPanel.repaint(x * blockSize, y * blockSize, blockSize, blockSize);
 
 				try {
 					out.writeInt(0);
@@ -275,6 +278,32 @@ public class UI extends JFrame {
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
+				paintPanel.repaint();
+			}
+		});
+
+		resetButton.addActionListener(e -> {
+			// pop a confirm dialog
+			int r = JOptionPane.showConfirmDialog(null,
+					"Are you sure to reset the canvas?",
+					"Reset",
+					JOptionPane.YES_NO_OPTION);
+			if (r == JOptionPane.YES_OPTION) {
+				for (int i = 0; i < panel.length; i++) {
+					for (int j = 0; j < panel[0].length; j++) {
+						try {
+							out.writeInt(0);
+							String p = i + " " + j + " " + 0;
+							out.writeInt(p.length());
+							out.write(p.getBytes(), 0, p.length());
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						}
+					}
+				}
+				undoStack.clear();
+				redoStack.clear();
+				paintPanel.repaint();
 			}
 		});
 
