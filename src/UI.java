@@ -204,7 +204,7 @@ public class UI extends JFrame {
 		resetButton = new JButton("Reset");
 		toolPnl.add(resetButton);
 
-		loadToggleButton = new JToggleButton("Import");
+		loadToggleButton = new JToggleButton("Load");
 		toolPnl.add(loadToggleButton);
 		loadToggleButton.setSelected(false);
 
